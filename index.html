@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+text {
+  font: 10px sans-serif;
+  text-anchor: middle;
+}
+
+</style>
+<h2>Olympics Medalists by Region</h2>
+<p>A profile of different regions of the world through the sports they're best at</p>
+
+<div class="container">
+    <div class="dropdown"></div>
+    <div class="custom-tooltip">
+        <p class="title"></p>
+        <p class="value"></p>
+    </div>
+</div>
+<svg width="960" height="880"></svg>
+<link href="./style.css" rel="stylesheet"/>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+
+<script>
+
+var diameter = 500, //max size of the bubbles
+    color    = d3.scale.category20b(); //color category
+
+var bubble = d3.layout.pack()
+    .sort(null)
+    .size([diameter, diameter])
+    .padding(1.5);
+
+var svg = d3.select(".container")
+    .append("svg")
+    .attr("width", diameter)
+    .attr("height", diameter)
+    .attr("class", "bubble");
+
+d3.csv("./data/data.csv", function(error, data){
+
+    //convert numerical values from strings to numbers
+    dataAll = data.map(function(d){ d.value = +d["count"]; return d; });
+
+    var dropDown = d3.select(".dropdown").append("select")
+                .attr("name", "byRegion")
+                .style("position", "absolute")
+                .attr("id", "menu");
+
+    dropDown.on('change',menuChanged);
+
+    var options = dropDown.selectAll("option")
+                .data(d3.map(dataAll,function(d){return d.region;}).keys())
+                .enter()
+                .append("option")
+                .text(function(d){return d;})
+                .attr("value",function(d){return d;})
+
+
+    var dataSelected = dataAll.filter(function(d,i){
+      if (d.region === "East Asia & Pacific"){
+        return d;
+      }
+    })
+
+    drawBubble(dataSelected)
+
+    function menuChanged(){
+      var selectedRegion = d3.event.target.value;
+      var data = dataAll.filter(function(d,i){
+      if (d.region === selectedRegion){
+        return d;
+        }
+      })
+      svg.select('g').remove();
+      svg.selectAll('text').remove();
+      drawBubble(data)
+    }
+
+    function drawBubble(data){
+      //bubbles needs very specific format, convert data to this.
+    var nodes = bubble.nodes({children:data}).filter(function(d) { return !d.children; });
+
+    //setup the chart
+    var bubbles = svg.append("g")
+        .attr("transform", "translate(0,0)")
+        .selectAll(".bubble")
+        .data(nodes)
+        .enter();
+
+    //create the bubbles
+    bubbles.append("circle")
+        .attr("r", function(d){ return d.r; })
+        .attr("cx", function(d){ return d.x; })
+        .attr("cy", function(d){ return d.y; })
+        .style("fill", function(d, i) { return color(i);})
+
+    //create the tooltip
+        .on('mouseenter',function(d){
+            var tooltip = d3.select('.custom-tooltip');
+            tooltip.select('.title')
+                .html(d.discipline)
+            tooltip.select('.value')
+                .html(d.count);
+
+            tooltip.transition().style('opacity',1);
+
+            d3.select(this).style('stroke-width','3px');
+        })
+        .on('mousemove',function(d){
+            var tooltip = d3.select('.custom-tooltip');
+            var xy = d3.mouse( d3.select('.container').node() );
+                console.log(xy)
+            tooltip
+                .style('left',xy[0]+10+'px')
+                .style('top',xy[1]+10+'px');
+        })
+        .on('mouseleave',function(d){
+            var tooltip = d3.select('.custom-tooltip');
+            tooltip.transition().style('opacity',0);
+
+            d3.select(this).style('stroke-width','0px');
+    });
+    }
+
+    
+})
+</script>
